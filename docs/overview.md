@@ -20,9 +20,11 @@ This module owns an I/O boundary. It creates or adapts Gnalloy Channels for a co
 - `gnalloy.org/transport-quic/application` (`application`)
 
 ## Direct Gnalloy Dependencies
+
 - `gnalloy.org/gnalloy`
 
-## Direct Dependents in the Current Module Plan
+## Direct Dependents in the Current Repository Set
+
 - `gnalloy.org/benchmarks`
 - `gnalloy.org/examples`
 - `gnalloy.org/resolver-dns-quic`

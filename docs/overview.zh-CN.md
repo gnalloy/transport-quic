@@ -20,9 +20,11 @@
 - `gnalloy.org/transport-quic/application`（`application`）
 
 ## 直接 Gnalloy 依赖
+
 - `gnalloy.org/gnalloy`
 
-## 当前模块规划中的直接下游
+## 当前仓库集合中的直接下游
+
 - `gnalloy.org/benchmarks`
 - `gnalloy.org/examples`
 - `gnalloy.org/resolver-dns-quic`
