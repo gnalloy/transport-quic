@@ -12,7 +12,7 @@ const DefaultMaxFrameSize = 1<<16 - 1
 //
 // DNS-over-QUIC、DNS-over-TCP 这类短消息 request-response 协议可直接复用。
 type LengthPrefixedCodec struct {
-	// MaxFrameSize 限制 payload 最大字节数，0 表示 65536 字节。
+	// MaxFrameSize 限制 payload 最大字节数，0 表示 65535 字节。
 	MaxFrameSize int
 }
 
@@ -31,6 +31,25 @@ func (c LengthPrefixedCodec) WriteFrame(w io.Writer, payload []byte) error {
 		return err
 	}
 	return writeFull(w, payload)
+}
+
+// WriteFrameInto 使用调用方缓冲区组装完整帧并单次提交，适合复用固定大小缓冲区的热路径。
+func (c LengthPrefixedCodec) WriteFrameInto(w io.Writer, payload, dst []byte) error {
+	if w == nil {
+		return ErrInvalidConfig
+	}
+	maxFrameSize := c.maxFrameSize()
+	if len(payload) > maxFrameSize || len(payload) > 0xffff {
+		return fmt.Errorf("%w: %d > %d", ErrFrameTooLarge, len(payload), maxFrameSize)
+	}
+	frameSize := 2 + len(payload)
+	if len(dst) < frameSize {
+		return fmt.Errorf("%w: need %d bytes, have %d", io.ErrShortBuffer, frameSize, len(dst))
+	}
+	frame := dst[:frameSize]
+	copy(frame[2:], payload)
+	binary.BigEndian.PutUint16(frame[:2], uint16(len(payload)))
+	return writeFull(w, frame)
 }
 
 // ReadFrame 读取一帧长度前缀消息。

@@ -58,6 +58,40 @@ func TestLengthPrefixedCodecCompletesShortWrites(t *testing.T) {
 	}
 }
 
+func TestLengthPrefixedCodecWritesFrameIntoReusableBuffer(t *testing.T) {
+	codec := LengthPrefixedCodec{MaxFrameSize: 8}
+	dst := make([]byte, 6)
+	payload := dst[2:]
+	copy(payload, "ping")
+	writer := &countingWriter{limit: len(dst)}
+	if err := codec.WriteFrameInto(writer, payload, dst); err != nil {
+		t.Fatal(err)
+	}
+	want := []byte{0, 4, 'p', 'i', 'n', 'g'}
+	if !bytes.Equal(writer.Bytes(), want) {
+		t.Fatalf("wire=%v, want=%v", writer.Bytes(), want)
+	}
+	if writer.writes != 1 {
+		t.Fatalf("writes=%d, want 1", writer.writes)
+	}
+
+	writer = &countingWriter{limit: 2}
+	if err := codec.WriteFrameInto(writer, payload, dst); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(writer.Bytes(), want) || writer.writes != 3 {
+		t.Fatalf("short writes=%d wire=%v, want 3 writes and %v", writer.writes, writer.Bytes(), want)
+	}
+}
+
+func TestLengthPrefixedCodecWriteFrameIntoRejectsShortBuffer(t *testing.T) {
+	codec := LengthPrefixedCodec{MaxFrameSize: 8}
+	err := codec.WriteFrameInto(&bytes.Buffer{}, []byte("ping"), make([]byte, 5))
+	if !errors.Is(err, io.ErrShortBuffer) {
+		t.Fatalf("err=%v, want %v", err, io.ErrShortBuffer)
+	}
+}
+
 func TestLengthPrefixedCodecReadsIntoReusableBuffer(t *testing.T) {
 	codec := LengthPrefixedCodec{MaxFrameSize: 8}
 	dst := make([]byte, 8)
@@ -81,6 +115,20 @@ type shortWriter struct {
 }
 
 func (w *shortWriter) Write(payload []byte) (int, error) {
+	if len(payload) > w.limit {
+		payload = payload[:w.limit]
+	}
+	return w.Buffer.Write(payload)
+}
+
+type countingWriter struct {
+	bytes.Buffer
+	limit  int
+	writes int
+}
+
+func (w *countingWriter) Write(payload []byte) (int, error) {
+	w.writes++
 	if len(payload) > w.limit {
 		payload = payload[:w.limit]
 	}
