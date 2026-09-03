@@ -36,6 +36,16 @@ func TestLengthPrefixedCodecRejectsOversizedFrame(t *testing.T) {
 	}
 }
 
+func TestLengthPrefixedCodecDefaultLimitMatchesWireFormat(t *testing.T) {
+	codec := LengthPrefixedCodec{}
+	if err := codec.WriteFrame(&bytes.Buffer{}, make([]byte, DefaultMaxFrameSize)); err != nil {
+		t.Fatalf("maximum frame: %v", err)
+	}
+	if err := codec.WriteFrame(&bytes.Buffer{}, make([]byte, DefaultMaxFrameSize+1)); !errors.Is(err, ErrFrameTooLarge) {
+		t.Fatalf("err=%v, want %v", err, ErrFrameTooLarge)
+	}
+}
+
 func TestLengthPrefixedCodecCompletesShortWrites(t *testing.T) {
 	writer := &shortWriter{limit: 1}
 	codec := LengthPrefixedCodec{MaxFrameSize: 8}

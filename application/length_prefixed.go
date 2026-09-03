@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-const DefaultMaxFrameSize = 1 << 16
+const DefaultMaxFrameSize = 1<<16 - 1
 
 // LengthPrefixedCodec 使用两字节网络序长度前缀封装应用消息。
 //
